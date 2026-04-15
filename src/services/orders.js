@@ -26,7 +26,17 @@ export const deleteItemFromOrder = async (orderId, itemId) => {
   return response.data;
 };
 
-export const updateOrderStatus = async (orderId, newStatus) => {
-  const response = await api.patch(`/work-orders/${orderId}/status`, { status: newStatus });
+export const updateOrderStatus = async (orderId, newStatus, note = '') => {
+  const response = await api.patch(`/work-orders/${orderId}/status`, { status: newStatus, note });
+  return response.data;
+};
+
+export const getOrderHistory = async (orderId, { page = 1, pageSize = 20, userId, startDate, endDate } = {}) => {
+  const params = { page, pageSize };
+  if (userId) params.userId = userId;
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+  
+  const response = await api.get(`/work-orders/${orderId}/history`, { params });
   return response.data;
 };

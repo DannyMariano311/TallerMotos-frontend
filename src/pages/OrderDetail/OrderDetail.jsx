@@ -1,14 +1,18 @@
 import { getOrderById, addItemToOrder, deleteItemFromOrder, updateOrderStatus } from '../../services/orders';
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { OrderHistory } from '../../components/OrderHistory/OrderHistory';
 
 export const OrderDetail = () => {
+    const { isAdmin } = useAuth();
     const [orderDetail, setOrderDetail] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [refreshHistoryKey, setRefreshHistoryKey] = useState(0);
     const [formData, setFormData] = useState({
         type: '',
         description: '',
@@ -112,28 +116,46 @@ export const OrderDetail = () => {
     };
 
     const getValidTransitions = (currentStatus) => {
-        const stateFlow = {
-            RECIBIDA: ['DIAGNOSTICO', 'CANCELADA'],
-            DIAGNOSTICO: ['EN_PROCESO', 'CANCELADA'],
-            EN_PROCESO: ['LISTA', 'CANCELADA'],
-            LISTA: ['ENTREGADA', 'CANCELADA'],
-            ENTREGADA: [],
-            CANCELADA: []
+        let stateFlow = {};
+        if (!isAdmin) {
+            stateFlow = {
+                RECIBIDA: ['DIAGNOSTICO'],
+                DIAGNOSTICO: ['EN_PROCESO'],
+                EN_PROCESO: ['LISTA'],
+                LISTA: [],
+                ENTREGADA: [],
+                CANCELADA: []
+            };
+            return stateFlow[currentStatus] || [];
+        }
+
+        stateFlow = {
+            RECIBIDA: ['DIAGNOSTICO', 'EN_PROCESO', 'LISTA', 'ENTREGADA', 'CANCELADA'],
+            DIAGNOSTICO: ['RECIBIDA', 'EN_PROCESO', 'LISTA', 'ENTREGADA', 'CANCELADA'],
+            EN_PROCESO: ['RECIBIDA', 'DIAGNOSTICO', 'LISTA', 'ENTREGADA', 'CANCELADA'],
+            LISTA: ['RECIBIDA', 'DIAGNOSTICO', 'EN_PROCESO', 'ENTREGADA', 'CANCELADA'],
+            ENTREGADA: ['RECIBIDA', 'DIAGNOSTICO', 'EN_PROCESO', 'LISTA', 'CANCELADA'],
+            CANCELADA: ['RECIBIDA', 'DIAGNOSTICO', 'EN_PROCESO', 'LISTA', 'ENTREGADA']
         };
         return stateFlow[currentStatus] || [];
     };
 
     const handleChangeStatus = async (newStatus) => {
-        if (!window.confirm(`¿Cambiar el estado a ${newStatus}?`)) {
-            return;
+        // Solicitar nota al usuario
+        const note = prompt(`Ingresa una nota para el cambio a ${newStatus}:\n\n(Deja vacío si no deseas agregar una nota)`);
+        
+        if (note === null) {
+            return; // Usuario canceló
         }
 
         setIsUpdatingStatus(true);
         try {
-            await updateOrderStatus(id, newStatus);
+            await updateOrderStatus(id, newStatus, note);
             // Recargar la orden después de cambiar el estado
             const updatedOrder = await getOrderById(id);
             setOrderDetail(updatedOrder);
+            // Refrescar el historial
+            setRefreshHistoryKey(prev => prev + 1);
         } catch (err) {
             alert('Error al cambiar el estado: ' + (err.response?.data?.message || err.message || 'Intenta de nuevo'));
         } finally {
@@ -233,7 +255,9 @@ export const OrderDetail = () => {
                                 <th style={{ padding: '10px' }}>Cantidad</th>
                                 <th style={{ padding: '10px' }}>Valor Unitario</th>
                                 <th style={{ padding: '10px' }}>Subtotal</th>
-                                <th style={{ padding: '10px' }}>Acciones</th>
+                                {isAdmin && (
+                                    <th style={{ padding: '10px' }}>Acciones</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
@@ -247,22 +271,24 @@ export const OrderDetail = () => {
                                         <td style={{ padding: '10px' }}>{item.count ?? '-'}</td>
                                         <td style={{ padding: '10px' }}>{formatMoney(item.unitValue)}</td>
                                         <td style={{ padding: '10px' }}>{formatMoney(subtotal)}</td>
-                                        <td style={{ padding: '10px' }}>
-                                            <button
-                                                onClick={() => handleDeleteItem(item.id)}
-                                                style={{
-                                                    padding: '6px 12px',
-                                                    background: '#f44336',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '12px'
-                                                }}
-                                            >
-                                                Eliminar
-                                            </button>
-                                        </td>
+                                        {isAdmin && (
+                                            <td style={{ padding: '10px' }}>
+                                                <button
+                                                    onClick={() => handleDeleteItem(item.id)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        background: '#f44336',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '12px'
+                                                    }}
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}
@@ -424,6 +450,9 @@ export const OrderDetail = () => {
                     </div>
                 </div>
             )}
+
+            {/* Historial de cambios de estado */}
+            <OrderHistory orderId={id} refreshKey={refreshHistoryKey} />
         </div>
     );
 };

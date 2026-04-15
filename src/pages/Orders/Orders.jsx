@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders } from '../../services/orders';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Orders = () => {
+    const { isAdmin } = useAuth();
     const [orders, setOrders] = useState({ orders: [] });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -148,11 +150,13 @@ export const Orders = () => {
                         {isLoading ? 'Cargando...' : '🔄 Refrescar'}
                     </button>
                     {/* Botón para ir a crear una nueva orden */}
-                    <Link to="/orders/new">
-                        <button style={{ padding: '10px', cursor: 'pointer', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px' }}>
-                            + Nueva Orden
-                        </button>
-                    </Link>
+                    {isAdmin && (
+                        <Link to="/orders/new">
+                            <button style={{ padding: '10px', cursor: 'pointer', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px' }}>
+                                + Nueva Orden
+                            </button>
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -284,10 +288,10 @@ export const Orders = () => {
                                         fontSize: '12px',
                                         fontWeight: 'bold',
                                         background: order.status === 'ENTREGADA' ? '#4CAF50' :
-                                                   order.status === 'CANCELADA' ? '#f44336' :
-                                                   order.status === 'LISTA' ? '#FF9800' :
-                                                   order.status === 'EN_PROCESO' ? '#2196F3' :
-                                                   order.status === 'DIAGNOSTICO' ? '#9C27B0' : '#757575',
+                                            order.status === 'CANCELADA' ? '#f44336' :
+                                                order.status === 'LISTA' ? '#FF9800' :
+                                                    order.status === 'EN_PROCESO' ? '#2196F3' :
+                                                        order.status === 'DIAGNOSTICO' ? '#9C27B0' : '#757575',
                                         color: 'white'
                                     }}>
                                         {order.status}

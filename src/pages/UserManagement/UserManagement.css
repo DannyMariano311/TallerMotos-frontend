@@ -1,0 +1,44 @@
+/* UserManagement.css */
+
+.users-table-container {
+  overflow-x: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+}
+
+.users-table-container table {
+  font-size: 14px;
+}
+
+.users-table-container th {
+  background: linear-gradient(135deg, #f2f2f2 0%, #e8e8e8 100%);
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+.users-table-container td {
+  vertical-align: middle;
+}
+
+.users-table-container tr:hover {
+  background-color: #fafafa;
+}
+
+@media (max-width: 768px) {
+  .users-table-container {
+    font-size: 12px;
+  }
+
+  .users-table-container button {
+    display: block;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 6px !important;
+  }
+
+  .users-table-container td {
+    padding: 8px !important;
+  }
+}
